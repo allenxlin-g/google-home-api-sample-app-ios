@@ -47,194 +47,293 @@ public struct CameraSettingsView<T: DeviceType>: View {
     return AnyView(
       List {
         if viewModel.displayedSettings.contains(.microphone) {
-          Section {
-            Toggle(isOn: viewModel.microphoneOnController.binding) {
-              HStack {
-                Image(systemName: "microphone.fill")
-                Text("Microphone")
-                if viewModel.microphoneOnController.isLoading {
-                  ProgressView()
-                }
-              }
-            }
-            .disabled(!viewModel.microphoneOnController.isEnabled)
-            Toggle(isOn: viewModel.audioRecordingOnController.binding) {
-              HStack {
-                Image(systemName: "waveform")
-                Text("Audio Recording")
-                if viewModel.audioRecordingOnController.isLoading {
-                  ProgressView()
-                }
-              }
-            }
-            .disabled(
-              !self.viewModel.audioRecordingOnController.isEnabled
-                || !self.viewModel.microphoneOnController.value)
-          } header: {
-            Text("Microphone Settings")
-          } footer: {
-            Text(
-              "When audio recording is off, the microphone still lets you hear live audio, "
-                + "but it won't be saved to your history."
-            )
-          }
+          microphoneSettingsSection
         }
         if viewModel.displayedSettings.contains(.camera) {
-          Section {
-            Picker(selection: viewModel.imageRotationController.binding) {
-              ForEach(viewModel.imageRotationSettings, id: \.self) { imageRotation in
-                Text("\(imageRotation)°")
-              }
-            } label: {
-              HStack {
-                Text("Image Rotation")
-                if viewModel.imageRotationController.isLoading {
-                  ProgressView()
-                }
-              }
-            }.disabled(!viewModel.imageRotationController.isEnabled)
-            Picker(selection: viewModel.nightVisionController.binding) {
-              ForEach(viewModel.nightVisionSettings, id: \.self) { nightVision in
-                Text(viewModel.triStateAutoEnumDisplayName(setting: nightVision))
-              }
-            } label: {
-              HStack {
-                Text("Night Vision")
-                if viewModel.nightVisionController.isLoading {
-                  ProgressView()
-                }
-              }
-            }.disabled(!viewModel.nightVisionController.isEnabled)
-            VStack {
-              HStack {
-                Text(
-                  "Camera Speaker Volume: \(Int(viewModel.speakerVolumeController.binding.wrappedValue))"
-                )
-                if viewModel.speakerVolumeController.isLoading {
-                  ProgressView()
-                }
-                Spacer()
-              }
-              Slider(
-                value: viewModel.speakerVolumeController.binding,
-                in: 0...100,
-                step: 1,
-                onEditingChanged: { editing in
-                  if !editing {
-                    Task {
-                      await viewModel.speakerVolumeController.manualRemoteUpdateValue()
-                    }
-                  }
-                }
-              ).disabled(!viewModel.speakerVolumeController.isEnabled)
-            }
-            Picker(selection: viewModel.statusLightBrightnessController.binding) {
-              ForEach(viewModel.statusLightBrightnessSettings, id: \.self) {
-                statusLightBrightness in
-                Text(viewModel.threeLevelAutoEnumDisplayName(setting: statusLightBrightness))
-              }
-            } label: {
-              HStack {
-                Text("Status Light Brightness")
-                if viewModel.statusLightBrightnessController.isLoading {
-                  ProgressView()
-                }
-              }
-            }.disabled(!viewModel.statusLightBrightnessController.isEnabled)
-          } header: {
-            Text("Camera Settings")
-          }
+          cameraSettingsSection
         }
-
         if viewModel.displayedSettings.contains(.doorbell) {
-          Section {
-            Picker(selection: viewModel.doorbellChimeController.binding) {
-              ForEach(viewModel.doorbellChimeSettings, id: \.id) { doorbellChime in
-                Text("\(doorbellChime.displayName)").tag(doorbellChime)
-              }
-            } label: {
-              HStack {
-                Text("Doorbell Chime")
-                if viewModel.doorbellChimeController.isLoading {
-                  ProgressView()
-                }
-              }
-            }
-            .disabled(!viewModel.doorbellChimeController.isEnabled)
-            Picker(selection: viewModel.externalChimeController.binding) {
-              ForEach(viewModel.externalChimeSettings, id: \.self) { externalChime in
-                Text(viewModel.externalChimeDisplayName(setting: externalChime))
-              }
-            } label: {
-              HStack {
-                Text("Doorbell Chime Type")
-                if viewModel.externalChimeController.isLoading {
-                  ProgressView()
-                }
-              }
-            }
-            .disabled(!viewModel.externalChimeController.isEnabled)
-          } header: {
-            Text("Doorbell Settings")
-          }
+          doorbellSettingsSection
         }
-
         if viewModel.displayedSettings.contains(.battery) {
-          Section {
-            Picker(selection: viewModel.wakeUpSensitivityController.binding) {
-              ForEach(viewModel.wakeUpSensitivitySettings, id: \.self) { wakeUpSensitivity in
-                Text(viewModel.wakeUpSensitivityDisplayName(setting: wakeUpSensitivity))
-              }
-            } label: {
-              HStack {
-                Text("Wake Up Sensitivity")
-                if viewModel.wakeUpSensitivityController.isLoading {
-                  ProgressView()
-                }
-              }
-            }.disabled(!viewModel.wakeUpSensitivityController.isEnabled)
-            Picker(selection: viewModel.maxEventLengthController.binding) {
-              ForEach(viewModel.maxEventLengthSettings, id: \.self) { maxEventLength in
-                Text("\(maxEventLength)s")
-              }
-            } label: {
-              HStack {
-                Text("Max Event Length")
-                if viewModel.maxEventLengthController.isLoading {
-                  ProgressView()
-                }
-              }
-            }.disabled(!viewModel.maxEventLengthController.isEnabled)
-          } header: {
-            Text("Battery Settings")
-          }
+          batterySettingsSection
         }
-
         if viewModel.displayedSettings.contains(.information) {
-          Section {
-            HStack {
-              Text("Vendor Name")
-              Spacer()
-              Text("\(viewModel.vendorName ?? "N/A")")
-                .foregroundColor(.gray)
-            }
-            HStack {
-              Text("Model Name")
-              Spacer()
-              Text("\(viewModel.productName ?? "N/A")")
-                .foregroundColor(.gray)
-            }
-            HStack {
-              Text("Software Version")
-              Spacer()
-              Text("\(viewModel.softwareVersionString ?? "N/A")")
-                .foregroundColor(.gray)
-            }
-          } header: {
-            Text("Device Information")
-          }
+          deviceInformationSection
+        }
+        if viewModel.displayedSettings.contains(.diagnostics) {
+          diagnosticsSettingsSection
         }
       }
     )
+  }
+
+  // MARK: - Section Views
+
+  private var microphoneSettingsSection: some View {
+    Section {
+      Toggle(isOn: viewModel.microphoneOnController.binding) {
+        HStack {
+          Image(systemName: "microphone.fill")
+          Text("Microphone")
+          if viewModel.microphoneOnController.isLoading {
+            ProgressView()
+          }
+        }
+      }
+      .disabled(!viewModel.microphoneOnController.isEnabled)
+      Toggle(isOn: viewModel.audioRecordingOnController.binding) {
+        HStack {
+          Image(systemName: "waveform")
+          Text("Audio Recording")
+          if viewModel.audioRecordingOnController.isLoading {
+            ProgressView()
+          }
+        }
+      }
+      .disabled(
+        !self.viewModel.audioRecordingOnController.isEnabled
+        || !self.viewModel.microphoneOnController.value)
+    } header: {
+      Text("Microphone Settings")
+    } footer: {
+      Text(
+        "When audio recording is off, the microphone still lets you hear live audio, "
+        + "but it won't be saved to your history."
+      )
+    }
+  }
+
+  private var cameraSettingsSection: some View {
+    Section {
+      Picker(selection: viewModel.imageRotationController.binding) {
+        ForEach(viewModel.imageRotationSettings, id: \.self) { imageRotation in
+          Text("\(imageRotation)°")
+        }
+      } label: {
+        HStack {
+          Text("Image Rotation")
+          if viewModel.imageRotationController.isLoading {
+            ProgressView()
+          }
+        }
+      }.disabled(!viewModel.imageRotationController.isEnabled)
+      Picker(selection: viewModel.nightVisionController.binding) {
+        ForEach(viewModel.nightVisionSettings, id: \.self) { nightVision in
+          Text(viewModel.triStateAutoEnumDisplayName(setting: nightVision))
+        }
+      } label: {
+        HStack {
+          Text("Night Vision")
+          if viewModel.nightVisionController.isLoading {
+            ProgressView()
+          }
+        }
+      }.disabled(!viewModel.nightVisionController.isEnabled)
+      VStack {
+        HStack {
+          Text(
+            "Camera Speaker Volume: \(Int(viewModel.speakerVolumeController.binding.wrappedValue))"
+          )
+          if viewModel.speakerVolumeController.isLoading {
+            ProgressView()
+          }
+          Spacer()
+        }
+        Slider(
+          value: viewModel.speakerVolumeController.binding,
+          in: 0...100,
+          step: 1,
+          onEditingChanged: { editing in
+            if !editing {
+              Task {
+                await viewModel.speakerVolumeController.manualRemoteUpdateValue()
+              }
+            }
+          }
+        ).disabled(!viewModel.speakerVolumeController.isEnabled)
+      }
+      Picker(selection: viewModel.statusLightBrightnessController.binding) {
+        ForEach(viewModel.statusLightBrightnessSettings, id: \.self) {
+          statusLightBrightness in
+          Text(viewModel.threeLevelAutoEnumDisplayName(setting: statusLightBrightness))
+        }
+      } label: {
+        HStack {
+          Text("Status Light Brightness")
+          if viewModel.statusLightBrightnessController.isLoading {
+            ProgressView()
+          }
+        }
+      }.disabled(!viewModel.statusLightBrightnessController.isEnabled)
+    } header: {
+      Text("Camera Settings")
+    }
+  }
+
+  private var doorbellSettingsSection: some View {
+    Section {
+      Picker(selection: viewModel.doorbellChimeController.binding) {
+        ForEach(viewModel.doorbellChimeSettings, id: \.id) { doorbellChime in
+          Text("\(doorbellChime.displayName)").tag(doorbellChime)
+        }
+      } label: {
+        HStack {
+          Text("Doorbell Chime")
+          if viewModel.doorbellChimeController.isLoading {
+            ProgressView()
+          }
+        }
+      }
+      .disabled(!viewModel.doorbellChimeController.isEnabled)
+      Picker(selection: viewModel.externalChimeController.binding) {
+        ForEach(viewModel.externalChimeSettings, id: \.self) { externalChime in
+          Text(viewModel.externalChimeDisplayName(setting: externalChime))
+        }
+      } label: {
+        HStack {
+          Text("Doorbell Chime Type")
+          if viewModel.externalChimeController.isLoading {
+            ProgressView()
+          }
+        }
+      }
+      .disabled(!viewModel.externalChimeController.isEnabled)
+    } header: {
+      Text("Doorbell Settings")
+    }
+  }
+
+  private var batterySettingsSection: some View {
+    Section {
+      HStack {
+        Text("Battery Percentage")
+        Spacer()
+        Text(viewModel.batteryPercentRemaining.map { "\(Int($0) / 2) %" } ?? "N/A")
+          .foregroundColor(.gray)
+      }
+      HStack {
+        Text("Battery Level")
+        Spacer()
+        Text(viewModel.batteryChargeLevelDisplayName(setting: viewModel.descriptiveCapacityRemaining))
+          .foregroundColor(.gray)
+      }
+      HStack {
+        Text("Charging State")
+        Spacer()
+        Text(viewModel.batteryChargeStateDisplayName(setting: viewModel.chargingState))
+          .foregroundColor(.gray)
+      }
+      Picker(selection: viewModel.wakeUpSensitivityController.binding) {
+        ForEach(viewModel.wakeUpSensitivitySettings, id: \.self) { wakeUpSensitivity in
+          Text(viewModel.wakeUpSensitivityDisplayName(setting: wakeUpSensitivity))
+        }
+      } label: {
+        HStack {
+          Text("Wake Up Sensitivity")
+          if viewModel.wakeUpSensitivityController.isLoading {
+            ProgressView()
+          }
+        }
+      }.disabled(!viewModel.wakeUpSensitivityController.isEnabled)
+      Picker(selection: viewModel.maxEventLengthController.binding) {
+        ForEach(viewModel.maxEventLengthSettings, id: \.self) { maxEventLength in
+          Text("\(maxEventLength)s")
+        }
+      } label: {
+        HStack {
+          Text("Max Event Length")
+          if viewModel.maxEventLengthController.isLoading {
+            ProgressView()
+          }
+        }
+      }.disabled(!viewModel.maxEventLengthController.isEnabled)
+      Toggle(isOn: viewModel.autoBatterySaverEnabledController.binding) {
+        HStack {
+          Text("Auto Battery Saver")
+          if viewModel.autoBatterySaverEnabledController.isLoading {
+            ProgressView()
+          }
+        }
+      }
+      .disabled(!viewModel.autoBatterySaverEnabledController.isEnabled)
+      Picker(selection: viewModel.batteryUsageController.binding) {
+        ForEach(viewModel.batteryUsageSettings, id: \.self) { batteryUsage in
+          Text(viewModel.batteryUsageDisplayName(setting: batteryUsage))
+        }
+      } label: {
+        HStack {
+          Text("Battery Usage")
+          if viewModel.batteryUsageController.isLoading {
+            ProgressView()
+          }
+        }
+      }.disabled(!viewModel.batteryUsageController.isEnabled)
+    } header: {
+      Text("Battery Settings")
+    }
+  }
+
+  private var deviceInformationSection: some View {
+    Section {
+      HStack {
+        Text("Vendor Name")
+        Spacer()
+        Text("\(viewModel.vendorName ?? "N/A")")
+          .foregroundColor(.gray)
+      }
+      HStack {
+        Text("Model Name")
+        Spacer()
+        Text("\(viewModel.productName ?? "N/A")")
+          .foregroundColor(.gray)
+      }
+      HStack {
+        Text("Software Version")
+        Spacer()
+        Text("\(viewModel.softwareVersionString ?? "N/A")")
+          .foregroundColor(.gray)
+      }
+      HStack {
+        Text("Serial Number")
+        Spacer()
+        Text("\(viewModel.serialNumber ?? "N/A")")
+          .foregroundColor(.gray)
+      }
+      HStack {
+        Text("Last Connected Time")
+        Spacer()
+        Text("\(viewModel.lastConnectedTime?.formatted() ?? "N/A")")
+          .foregroundColor(.gray)
+      }
+    } header: {
+      Text("Device Information")
+    }
+  }
+
+  private var diagnosticsSettingsSection: some View {
+    Section {
+      Toggle(isOn: viewModel.analyticsEnabledController.binding) {
+        HStack {
+          Text("Analytics Enabled")
+          if viewModel.analyticsEnabledController.isLoading {
+            ProgressView()
+          }
+        }
+      }
+      .disabled(!viewModel.analyticsEnabledController.isEnabled)
+      Toggle(isOn: viewModel.logUploadEnabledController.binding) {
+        HStack {
+          Text("Log Upload Enabled")
+          if viewModel.logUploadEnabledController.isLoading {
+            ProgressView()
+          }
+        }
+      }
+      .disabled(!viewModel.analyticsEnabledController.isEnabled
+                || !viewModel.logUploadEnabledController.isEnabled)
+    } header: {
+      Text("Diagnostics Settings")
+    }
   }
 }

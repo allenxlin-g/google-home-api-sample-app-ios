@@ -14,7 +14,6 @@
 
 import Combine
 import GoogleHomeSDK
-import OSLog
 
 /// View model for the AutomationView.
 @MainActor
@@ -26,7 +25,7 @@ public final class AutomationViewModel: ObservableObject {
   /// Indicates whether or not the view is busy.
   @Published public var isBusy = false
   /// Indicates failure to update the automation.
-  @Published public var saveError: (any Error)?
+  @Published public var error: (any Error)?
   /// Indicates whether the automation being displayed is manually executable
   @Published public var isManuallyExecutable: Bool = false
   /// Indicates whether the automation execution attempt failed
@@ -34,7 +33,7 @@ public final class AutomationViewModel: ObservableObject {
 
   public let automationModel: AutomationUIDataModel
 
-  /// The selected automation object
+  // The selected automation object
   private let automation: any Automation
   private let automationList: AutomationList
 
@@ -54,33 +53,28 @@ public final class AutomationViewModel: ObservableObject {
 
   /// Saves the automation with the updated name and description.
   public func saveAutomation() async throws {
-    Task { @MainActor in
-      guard let updatedAutomation = self.updatedAutomation() else { return }
-      self.isBusy = true
-      do {
-        _ = try await automationList.updateAutomation(updatedAutomation)
-      } catch {
-        Logger().error("Save automation failed: \(error)")
-        saveError = error
-        throw error
-      }
-      isBusy = false
+    guard let updatedAutomation = self.updatedAutomation() else { return }
+    self.isBusy = true
+    do {
+      _ = try await automationList.updateAutomation(updatedAutomation)
+    } catch {
+      self.error = error
+      self.isBusy = false
+      throw error
     }
+    isBusy = false
   }
 
   public func executeAutomation() async throws {
-    Task { @MainActor in
-      do {
-        try await automation.execute()
-      } catch {
-        Logger().error("Execute automation failed: \(error)")
-        executionError = error
-        throw error
-      }
+    do {
+      try await automation.execute()
+    } catch {
+      executionError = error
+      throw error
     }
   }
 
-  /// Update the name and the desciption.
+  // Update the name and the desciption.
   private func updatedAutomation() -> (any DraftAutomation)? {
     return GoogleHomeSDK.automation(
        id: automation.id,

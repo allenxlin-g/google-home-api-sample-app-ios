@@ -22,6 +22,8 @@ struct AutomationCreationView: View {
   @Binding var navigationPath: NavigationPath
   @State var showProgressView = false
 
+  @State private var isShowingErrorAlert = false
+
   public var body: some View {
     VStack {
       /// Read starters, conditions, and actions from the data model and display them
@@ -54,6 +56,12 @@ struct AutomationCreationView: View {
               .tint(.white)
           }
       }
+    }
+    .errorAlert(
+      isPresented: $isShowingErrorAlert,
+      error: viewModel.error.map { .errorSavingAutomation(error: $0.localizedDescription) }
+    ) {
+      viewModel.error = nil
     }
   }
 
@@ -95,8 +103,14 @@ struct AutomationCreationView: View {
       Button(action: {
         showProgressView = true
         Task {
-          try await viewModel.createAutomation()
-          navigationPath.removeLast(navigationPath.count)
+          do {
+            try await viewModel.createAutomation()
+            navigationPath.removeLast(navigationPath.count)
+            showProgressView = false
+          } catch {
+            self.isShowingErrorAlert = true
+            self.showProgressView = false
+          }
         }
       }) {
         Text("Save")

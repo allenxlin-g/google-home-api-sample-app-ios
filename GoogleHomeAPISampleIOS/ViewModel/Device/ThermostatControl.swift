@@ -87,16 +87,16 @@ final class ThermostatControl: DeviceControl {
 
         self.setupRangeControl(
           setpoint: thermostatTrait.coolingSetpoint,
+          isVisible: systemMode?.isModeCoolingRelated ?? false,
           control: &self.coolRangeControl,
-          cancellable: self.coolingRangeCancellable,
           makeControl: { thermostatTrait.makeCoolRangeControl() },
           subscriptionStarter: { self.startCoolingRangeSubscription() }
         )
 
         self.setupRangeControl(
           setpoint: thermostatTrait.heatingSetpoint,
+          isVisible: systemMode?.isModeHeatingRelated ?? false,
           control: &self.heatRangeControl,
-          cancellable: self.heatRangeCancellable,
           makeControl: { thermostatTrait.makeHeatRangeControl() },
           subscriptionStarter: { self.startHeatRangeSubscription() }
         )
@@ -304,12 +304,12 @@ final class ThermostatControl: DeviceControl {
 
   private func setupRangeControl(
     setpoint: Int16?,
+    isVisible: Bool,
     control: inout RangeControl?,
-    cancellable: AnyCancellable?,
     makeControl: () -> RangeControl?,
     subscriptionStarter: () -> Void
   ) {
-    guard let setpoint = setpoint else {
+    guard isVisible,let setpoint = setpoint else {
       control = nil
       return
     }
@@ -318,10 +318,8 @@ final class ThermostatControl: DeviceControl {
     if control == nil {
       guard let newControl = makeControl() else { return }
       control = newControl
-      subscriptionStarter()
-    } else if cancellable == nil {
-      subscriptionStarter()
     }
+    subscriptionStarter()
 
     // Only update UI if difference is significant (prevents jitter while dragging)
     if abs((control?.rangeValue ?? target) - target) > 0.1 {

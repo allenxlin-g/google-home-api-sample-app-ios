@@ -55,6 +55,12 @@ struct AutomationView: View {
         }.disabled(viewModel.isBusy)
       }
     }
+    .errorAlert(
+      isPresented: $isShowingEditSaveError,
+      error: viewModel.error.map { .unableToSaveAutomation(error: $0.localizedDescription) }
+    ) {
+      viewModel.error = nil
+    }
   }
 
   init(viewModel: AutomationViewModel) {
@@ -92,11 +98,6 @@ struct AutomationView: View {
     } label: {
       Label("Save", image: "save")
     }
-    .alert("Unable to save automation", isPresented: $isShowingEditSaveError) {
-      Button("Dismiss") {
-       viewModel.saveError = nil
-      }
-    }
   }
 
   private func createExecuteAutomationButton() -> some View {
@@ -111,10 +112,8 @@ struct AutomationView: View {
     } label: {
       Label("Execute", image: "play_arrow_symbol")
     }
-    .alert("Unable to execute automation", isPresented: $isShowingExecuteAutomationError) {
-      Button("Dismiss") {
-        viewModel.executionError = nil
-      }
+    .errorAlert(isPresented: $isShowingExecuteAutomationError, error: .unableToExecuteAutomation) {
+      viewModel.executionError = nil
     }
     .disabled(!viewModel.isManuallyExecutable)
   }

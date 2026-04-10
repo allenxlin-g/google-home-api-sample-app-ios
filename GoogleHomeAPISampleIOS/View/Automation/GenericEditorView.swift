@@ -19,18 +19,20 @@ import SwiftUI
 struct GenericEditorView: View {
 
   @ObservedObject private var viewModel: GenericEditorViewModel
-  /// For Discovery API to fetch candidates and to store selected components
+  // For Discovery API to fetch candidates and to store selected components
   @ObservedObject private var candidatesViewModel: CandidatesViewModel
   private let automationRepository: AutomationsRepository
   @Binding var navigationPath: NavigationPath
-  @State var showProgressView = false
+  @State var isShowingProgressView = false
+
+  @State private var isShowingErrorAlert = false
 
   init(viewModel: GenericEditorViewModel, candidatesViewModel: CandidatesViewModel, automationRepository: AutomationsRepository, navigationPath: Binding<NavigationPath>) {
     self.viewModel = viewModel
     self.candidatesViewModel = candidatesViewModel
     self.automationRepository = automationRepository
     self._navigationPath = navigationPath
-    /// Clear anything previously stored
+    // Clear anything previously stored
     candidatesViewModel.clearSelected()
   }
 
@@ -52,13 +54,19 @@ struct GenericEditorView: View {
     .navigationTitle("Generic Editor")
     .navigationBarTitleDisplayMode(.inline)
     .overlay {
-      if showProgressView {
+      if isShowingProgressView {
         Color.black.opacity(0.35)
           .overlay {
             ProgressView()
               .tint(.white)
           }
       }
+    }
+    .errorAlert(
+      isPresented: $isShowingErrorAlert,
+      error: viewModel.error.map { .errorSavingAutomation(error: $0.localizedDescription) }
+    ) {
+      viewModel.error = nil
     }
   }
 
@@ -92,7 +100,7 @@ struct GenericEditorView: View {
   private func startersSection() -> some View {
     Section("Starter and Condition") {
       if let device = candidatesViewModel.selectedStarters.first {
-        /// If there's a selected one, display it
+        // If there's a selected one, display it
         if device.traitType is Matter.OnOffTrait.Type {
           let valueOnOff = device.valueOnOff ? "On": "Off"
           CreateButtonView(imageName: "astrophotography_mode_symbol", text1: device.device.name,
@@ -105,7 +113,7 @@ struct GenericEditorView: View {
             .padding(.bottom, .sm)
         }
       } else {
-        /// If there's no selected one, display a button for selection
+        // If there's no selected one, display a button for selection
         CreateButtonView(imageName: "astrophotography_mode_symbol", text1: "Add Starter and Condition",
                          text2: "") {
           navigationPath.append(Destination.StarterCandidatesView)
@@ -118,14 +126,14 @@ struct GenericEditorView: View {
   private func actionSection() -> some View {
     Section("Action") {
       if let device = candidatesViewModel.selectedActions.first {
-        /// If there's a selected one, display it
+        // If there's a selected one, display it
         if device.traitType is Matter.OnOffTrait.Type {
           let valueOnOff = device.valueOnOff ? "On": "Off"
           CreateButtonView(imageName: "astrophotography_mode_symbol", text1: device.device.name, text2: valueOnOff) {}
           .padding(.bottom, .sm)
         }
       } else {
-        /// If there's no selected one, display a button for selection
+        // If there's no selected one, display a button for selection
         CreateButtonView(imageName: "astrophotography_mode_symbol", text1: "Add Action", text2: "") {
           navigationPath.append(Destination.ActionCandidatesView)
         }
@@ -134,20 +142,34 @@ struct GenericEditorView: View {
     }.listRowSeparator(.hidden)
   }
 
+  @MainActor
   private func saveButtonView() -> some View {
     HStack {
       Spacer()
       Button(action: {
-        showProgressView = true
+        isShowingProgressView = true
         Task {
-          /// Create a DraftAutomation object
-          let draftAutomation = try await automationRepository.genericAutomation(name: viewModel.name, description: viewModel.description, starters: candidatesViewModel.selectedStarters, actions: candidatesViewModel.selectedActions)
-          /// Create the automation
-          try await viewModel.createAutomation(draftAutomation: draftAutomation)
-          /// Clear selected starter and action
-          candidatesViewModel.clearSelected()
-          /// Redirect back to AutomationsView
-          navigationPath.removeLast(navigationPath.count)
+          do {
+            // Create a DraftAutomation object
+            let draftAutomation = try await automationRepository.genericAutomation(
+              name: viewModel.name,
+              description: viewModel.description,
+              starters: candidatesViewModel.selectedStarters,
+              actions: candidatesViewModel.selectedActions
+            )
+
+            // Create the automation
+            try await viewModel.createAutomation(draftAutomation: draftAutomation)
+
+            // Clear selected starter and action
+            candidatesViewModel.clearSelected()
+            // Redirect back to AutomationsView
+            navigationPath.removeLast(navigationPath.count)
+            self.isShowingProgressView = false
+          } catch {
+            self.isShowingErrorAlert = true
+            self.isShowingProgressView = false
+          }
         }
       }) {
         Text("Save")

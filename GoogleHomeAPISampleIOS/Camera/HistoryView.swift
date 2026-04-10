@@ -105,7 +105,11 @@ public struct HistoryView: View {
     ForEach(self.historyViewModel.dailyEvents, id: \.dateString) { dayEvents in
       Section(header: Text(dayEvents.dateString)) {
         ForEach(dayEvents.events, id: \.id) { historyItem in
-          HistoryItemView(historyItem: historyItem, urlSession: self.urlSession)
+          NavigationLink (
+            destination: HistoricalPlaybackView(url: historyItem.historicalPlaybackURL)
+          ) {
+            HistoryItemView(historyItem: historyItem, urlSession: self.urlSession)
+          }
         }
       }
     }

@@ -23,6 +23,9 @@ public class GenericEditorViewModel: ObservableObject {
   @Published public var description: String
   private let automationList: AutomationList
 
+  /// Indicates failure to create the automation.
+  @Published public var error: (any Error)?
+
   public init(automationList: AutomationList) {
     self.name = "Test Automation Name"
     self.description = "This is a test automation description"
@@ -31,7 +34,12 @@ public class GenericEditorViewModel: ObservableObject {
 
   /// Create automation command.
   public func createAutomation(draftAutomation: any DraftAutomation) async throws {
-    await automationList.createAutomation(draftAutomation)
-    try await automationList.refresh()
+    do {
+      try await automationList.createAutomation(draftAutomation)
+      try await automationList.refresh()
+    } catch {
+      self.error = error
+      throw error
+    }
   }
 }

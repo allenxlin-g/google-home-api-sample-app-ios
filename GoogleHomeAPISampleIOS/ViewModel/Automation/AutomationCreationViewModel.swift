@@ -21,6 +21,9 @@ public class AutomationCreationViewModel {
   /// The model parsed the automation graph
   public let automationModel: AutomationUIDataModel
 
+  /// Indicates failure to create the automation.
+  public var error: (any Error)?
+
   public init(automationList: AutomationList, draftAutomation: any DraftAutomation) {
     self.automationList = automationList
     self.draftAutomation = draftAutomation
@@ -29,7 +32,12 @@ public class AutomationCreationViewModel {
 
   /// Create automation command.
   public func createAutomation() async throws {
-    await automationList.createAutomation(draftAutomation)
-    try await automationList.refresh()
+    do {
+      try await automationList.createAutomation(draftAutomation)
+      try await automationList.refresh()
+    } catch {
+      self.error = error
+      throw error
+    }
   }
 }
