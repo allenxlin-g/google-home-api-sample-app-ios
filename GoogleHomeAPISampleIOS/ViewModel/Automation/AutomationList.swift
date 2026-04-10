@@ -55,7 +55,7 @@ public class AutomationList: ObservableObject {
   }
 
   /// Create automation command.
-  public func createAutomation(_ automationObject: any DraftAutomation) async {
+  public func createAutomation(_ automationObject: any DraftAutomation) async throws {
     do {
       let newAutomation = try await structure.createAutomation(automationObject)
       Logger().info("CreateCommand Response Automation name: \(newAutomation.name)")
@@ -64,6 +64,7 @@ public class AutomationList: ObservableObject {
       }
     } catch {
       Logger().error("CreateCommand error: \(error)")
+      throw error
     }
   }
 

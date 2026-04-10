@@ -19,12 +19,25 @@ import GoogleHomeTypes
 import OSLog
 import Observation
 
+extension UInt8 {
+  fileprivate init(_ bool: Bool) {
+    self = bool ? 1 : 0
+  }
+}
+
+private enum BatteryUsageLabel: String {
+  case extended = "EXTENDED"
+  case balanced = "BALANCED"
+  case performance = "PERFORMANCE"
+  case custom = "CUSTOM"
+}
+
 /// A ViewModel handling the camera device settings.
 @Observable
 @MainActor
 class CameraSettingsViewModel<T: DeviceType> {
 
-  // MARK - Settings Vars
+  // MARK: - Settings Vars
 
   /// String conversion for the Google.CameraAvStreamManagementTrait.TriStateAutoEnum enum.
   public func triStateAutoEnumDisplayName(
@@ -58,6 +71,40 @@ class CameraSettingsViewModel<T: DeviceType> {
     }
   }
 
+  /// String conversion for the Matter.PowerSourceTrait.BatChargeLevelEnum enum.
+  public func batteryChargeLevelDisplayName(
+    setting: Matter.PowerSourceTrait.BatChargeLevelEnum?
+  ) -> String {
+    guard let setting = setting else { return "Unknown" }
+    switch setting {
+    case .ok:
+      return "OK"
+    case .warning:
+      return "Warning"
+    case .critical:
+      return "Critical"
+    default:
+      return "Unknown"
+    }
+  }
+
+  /// String conversion for the Matter.PowerSourceTrait.BatChargeStateEnum enum.
+  public func batteryChargeStateDisplayName(
+    setting: Matter.PowerSourceTrait.BatChargeStateEnum?
+  ) -> String {
+    guard let setting = setting else { return "Unknown" }
+    switch setting {
+    case .isCharging:
+      return "Charging"
+    case .isAtFullCharge:
+      return "Full"
+    case .isNotCharging:
+      return "Not Charging"
+    default:
+      return "Unknown"
+    }
+  }
+
   /// String conversion for the wake up sensitivity setting integer.
   public func wakeUpSensitivityDisplayName(setting: UInt8) -> String {
     switch setting {
@@ -70,6 +117,13 @@ class CameraSettingsViewModel<T: DeviceType> {
     default:
       return ""
     }
+  }
+
+  /// String conversion for the battery usage setting enum.
+  public func batteryUsageDisplayName(setting: CameraSettingsViewModel.BatteryUsageSetting)
+    -> String
+  {
+    BatteryUsageLabel(rawValue: setting.label)?.rawValue.capitalized ?? setting.label
   }
 
   /// String conversion for the external chime setting enum.
@@ -92,13 +146,11 @@ class CameraSettingsViewModel<T: DeviceType> {
   /// Setting controller for the audio recording on/off setting.
   public private(set) var audioRecordingOnController: CameraSetting<Bool> =
     CameraSetting<Bool>(defaultValue: true)
-
   /// Accepted values for the image rotation setting (in degrees).
   public let imageRotationSettings: [Int] = [0, 180]
   /// Setting controller for the image rotation setting.
   public private(set) var imageRotationController: CameraSetting<Int> =
     CameraSetting<Int>(defaultValue: 0)
-
   /// Accepted values for the night vision setting.
   public let nightVisionSettings: [Google.CameraAvStreamManagementTrait.TriStateAutoEnum] = [
     .auto, .on, .off,
@@ -108,7 +160,13 @@ class CameraSettingsViewModel<T: DeviceType> {
     CameraSetting<Google.CameraAvStreamManagementTrait.TriStateAutoEnum> =
       CameraSetting<Google.CameraAvStreamManagementTrait.TriStateAutoEnum>(
         defaultValue: .auto)
-
+  public let statusLightBrightnessSettings:
+    [Google.CameraAvStreamManagementTrait.ThreeLevelAutoEnum] = [.auto, .low, .high]
+  /// Setting controller for the status light brightness setting.
+  public private(set) var statusLightBrightnessController:
+    CameraSetting<Google.CameraAvStreamManagementTrait.ThreeLevelAutoEnum> =
+      CameraSetting<Google.CameraAvStreamManagementTrait.ThreeLevelAutoEnum>(
+        defaultValue: .auto)
   /// Setting controller for the speaker volume setting.
   public private(set) var speakerVolumeController: CameraSetting<Double> =
     CameraSetting<Double>(defaultValue: 100, manualUpdate: true)
@@ -123,27 +181,6 @@ class CameraSettingsViewModel<T: DeviceType> {
   /// Binding for the doorbell chime setting.
   public private(set) var doorbellChimeController: CameraSetting<DoorbellChime> =
     CameraSetting<DoorbellChime>(defaultValue: DoorbellChime(id: 0, displayName: ""))
-
-  public let statusLightBrightnessSettings:
-    [Google.CameraAvStreamManagementTrait.ThreeLevelAutoEnum] = [.auto, .low, .high]
-  /// Setting controller for the status light brightness setting.
-  public private(set) var statusLightBrightnessController:
-    CameraSetting<Google.CameraAvStreamManagementTrait.ThreeLevelAutoEnum> =
-      CameraSetting<Google.CameraAvStreamManagementTrait.ThreeLevelAutoEnum>(
-        defaultValue: .auto)
-
-  /// Accepted values for the wake up sensitivity setting.
-  public let wakeUpSensitivitySettings: [UInt8] = [1, 5, 10]
-  /// Setting controller for the wake up sensitivity setting.
-  public private(set) var wakeUpSensitivityController: CameraSetting<UInt8> =
-    CameraSetting<UInt8>(defaultValue: 1)
-
-  /// Accepted values for the max event length setting.
-  public let maxEventLengthSettings: [UInt32] = [10, 15, 30, 60, 120, 180]
-  /// Setting controller for the max event length setting.
-  public private(set) var maxEventLengthController: CameraSetting<UInt32> =
-    CameraSetting<UInt32>(defaultValue: 10)
-
   /// Accepted values for the external chime setting enum.
   public let externalChimeSettings: [Google.ChimeTrait.ExternalChimeType] = [
     .none, .electronic, .mechanical,
@@ -153,6 +190,52 @@ class CameraSettingsViewModel<T: DeviceType> {
     CameraSetting<Google.ChimeTrait.ExternalChimeType> =
       CameraSetting<Google.ChimeTrait.ExternalChimeType>(defaultValue: .none)
 
+  /// Accepted values for the wake up sensitivity setting.
+  public let wakeUpSensitivitySettings: [UInt8] = [1, 5, 10]
+  /// Setting controller for the wake up sensitivity setting.
+  public private(set) var wakeUpSensitivityController: CameraSetting<UInt8> =
+    CameraSetting<UInt8>(defaultValue: 1)
+  /// Accepted values for the max event length setting.
+  public let maxEventLengthSettings: [UInt32] = [10, 15, 30, 60, 120, 180]
+  /// Setting controller for the max event length setting.
+  public private(set) var maxEventLengthController: CameraSetting<UInt32> =
+    CameraSetting<UInt32>(defaultValue: 10)
+
+  /// The current battery percentage remaining for the device.
+  public private(set) var batteryPercentRemaining: UInt8?
+  /// The current descriptive capacity remaining for the device.
+  public private(set) var descriptiveCapacityRemaining: Matter.PowerSourceTrait.BatChargeLevelEnum?
+  /// The current charging state for the device.
+  public private(set) var chargingState: Matter.PowerSourceTrait.BatChargeStateEnum?
+
+  /// Setting controller for the auto battery saver setting.
+  public private(set) var autoBatterySaverEnabledController: CameraSetting<Bool> =
+    CameraSetting<Bool>(defaultValue: false)
+  /// Struct to hold the battery usage setting values and their corresponding indices.
+  public struct BatteryUsageSetting: Hashable {
+    public var idx: UInt8
+    public var label: String
+  }
+  /// The available battery usage settings.
+  public var batteryUsageSettings: [BatteryUsageSetting] {
+    energyPreferenceTrait?.attributes.energyBalances?.enumerated().compactMap { index, setting in
+      BatteryUsageSetting(idx: UInt8(index), label: setting.label ?? "Unknown")
+    } ?? []
+  }
+  /// Setting controller for the battery usage setting.
+  public private(set) var batteryUsageController: CameraSetting<BatteryUsageSetting> =
+    CameraSetting<BatteryUsageSetting>(
+      defaultValue: BatteryUsageSetting(idx: 0, label: BatteryUsageLabel.custom.rawValue))
+
+  /// The last connected time for the device.
+  public private(set) var lastConnectedTime: Date?
+  /// Setting controller for the analytics on/off setting.
+  public private(set) var analyticsEnabledController: CameraSetting<Bool> =
+    CameraSetting<Bool>(defaultValue: false)
+  /// Setting controller for the log upload enabled setting.
+  public private(set) var logUploadEnabledController: CameraSetting<Bool> =
+    CameraSetting<Bool>(defaultValue: false)
+
   /// Vendor name for the device from the Matter BasicInformationTrait.
   public private(set) var vendorName: String?
   /// Product name for the device from the Matter BasicInformationTrait.
@@ -160,7 +243,8 @@ class CameraSettingsViewModel<T: DeviceType> {
   /// Software version string for the device from the Matter basicInformationTrait.
   public private(set) var softwareVersionString: String?
 
-  // End Settings Vars
+  /// Serial number for the device from the Matter ExtendedBasicInformationTrait.
+  public private(set) var serialNumber: String?
 
   public private(set) var settingsInitialized: Bool = false
 
@@ -178,6 +262,32 @@ class CameraSettingsViewModel<T: DeviceType> {
     didSet {
       Task {
         await self.updateSettingsFromPushAvStreamTransportTrait()
+      }
+    }
+  }
+  private var powerSourceTrait: Matter.PowerSourceTrait? {
+    didSet {
+      Task {
+        await self.updateSettingsFromPowerSourceTrait()
+      }
+    }
+  }
+  private var energyPreferenceTrait: Google.EnergyPreferenceTrait? {
+    didSet {
+      self.updateSettingsFromEnergyPreferenceTrait()
+    }
+  }
+  private var extendedGeneralDiagnosticsTrait: Google.ExtendedGeneralDiagnosticsTrait? {
+    didSet {
+      Task {
+        await self.updateSettingsFromExtendedGeneralDiagnosticsTrait()
+      }
+    }
+  }
+  private var extendedBasicInformationTrait: Google.ExtendedBasicInformationTrait? {
+    didSet {
+      Task {
+        await self.updateSettingsFromExtendedBasicInformationTrait()
       }
     }
   }
@@ -229,6 +339,10 @@ class CameraSettingsViewModel<T: DeviceType> {
         self.streamManagementTrait = deviceType.traits[Google.CameraAvStreamManagementTrait.self]
         self.doorbellChimeTrait = deviceType.traits[Google.ChimeTrait.self]
         self.pushAvStreamTransportTrait = deviceType.traits[Google.PushAvStreamTransportTrait.self]
+        self.extendedGeneralDiagnosticsTrait = deviceType.traits[Google.ExtendedGeneralDiagnosticsTrait.self]
+        self.powerSourceTrait = deviceType.traits[Matter.PowerSourceTrait.self]
+        self.energyPreferenceTrait = deviceType.traits[Google.EnergyPreferenceTrait.self]
+        self.extendedBasicInformationTrait = deviceType.traits[Google.ExtendedBasicInformationTrait.self]
 
         if deviceTypeCollection.contains(RootNodeDeviceType.self) {
           let rootNodeDeviceType = deviceTypeCollection.getAll(of: RootNodeDeviceType.self).first
@@ -256,6 +370,7 @@ class CameraSettingsViewModel<T: DeviceType> {
             }
 
             self.displayedSettings.insert(.information)
+            self.displayedSettings.insert(.diagnostics)
           }
         }
         self.settingsInitialized = true
@@ -286,6 +401,14 @@ class CameraSettingsViewModel<T: DeviceType> {
       { [weak self] value in await self?.setMaxEventLength(to: value) }
     self.externalChimeController.onUpdate =
       { [weak self] value in await self?.setExternalChime(to: value) }
+    self.autoBatterySaverEnabledController.onUpdate =
+      { [weak self] value in await self?.setEnergyPreference(to: value) }
+    self.batteryUsageController.onUpdate =
+      { [weak self] value in await self?.setBatteryUsage(to: value) }
+    self.analyticsEnabledController.onUpdate =
+      { [weak self] value in await self?.setAnalyticsEnabled(to: value) }
+    self.logUploadEnabledController.onUpdate =
+      { [weak self] value in await self?.setLogUploadEnabled(to: value) }
   }
 
   private func updateSettingsFromStreamManagementTrait() {
@@ -357,6 +480,67 @@ class CameraSettingsViewModel<T: DeviceType> {
     } catch {
       Logger().error("Failed to get transport configurations: \(error)")
       return
+    }
+  }
+
+  private func updateSettingsFromPowerSourceTrait() {
+    guard let powerSourceTrait else {
+      Logger().error("Power source trait not available")
+      return
+    }
+
+    self.batteryPercentRemaining = powerSourceTrait.attributes.batPercentRemaining
+    self.descriptiveCapacityRemaining = powerSourceTrait.attributes.batChargeLevel
+    self.chargingState = powerSourceTrait.attributes.batChargeState
+  }
+
+  private func updateSettingsFromEnergyPreferenceTrait() {
+    guard let energyPreferenceTrait else {
+      Logger().error("Energy preference trait not available")
+      return
+    }
+
+    let attributes = energyPreferenceTrait.attributes
+
+    self.autoBatterySaverEnabledController.updateValue(
+      value: attributes.currentLowPowerModeSensitivity == UInt8(true)
+    )
+
+    let selected =
+      batteryUsageSettings.first { $0.idx == attributes.currentEnergyBalance }
+      ?? BatteryUsageSetting(idx: 0, label: BatteryUsageLabel.custom.rawValue)
+
+    self.batteryUsageController.updateValue(value: selected)
+  }
+
+  private func updateSettingsFromExtendedGeneralDiagnosticsTrait() async {
+    guard let extendedGeneralDiagnosticsTrait else {
+      Logger().error("Extended general diagnostics trait not available")
+      return
+    }
+
+    if let lastConnectedTimeStamp = extendedGeneralDiagnosticsTrait.attributes.lastContactTimestamp
+    {
+      self.lastConnectedTime = Date(timeIntervalSince1970: Double(lastConnectedTimeStamp))
+    }
+
+    self.analyticsEnabledController.updateValue(
+      value: extendedGeneralDiagnosticsTrait.attributes.analyticsEnabled)
+    self.logUploadEnabledController.updateValue(
+      value: extendedGeneralDiagnosticsTrait.attributes.logUploadEnabled)
+  }
+
+  private func updateSettingsFromExtendedBasicInformationTrait() async {
+    guard let extendedBasicInformationTrait else {
+      Logger().error("Extended basic information trait not available")
+      return
+    }
+
+    do {
+      let response = try await extendedBasicInformationTrait.getSerialNumber()
+      self.serialNumber = response.serialNumber
+    } catch {
+      Logger().error("Failed to get serial number: \(error)")
     }
   }
 
@@ -542,6 +726,65 @@ class CameraSettingsViewModel<T: DeviceType> {
     }
   }
 
+  private func setEnergyPreference(to value: Bool) async {
+    guard let energyPreferenceTrait else {
+      Logger().error("Energy preference trait not available")
+      return
+    }
+
+    do {
+      _ = try await energyPreferenceTrait.update {
+        $0.setCurrentLowPowerModeSensitivity(UInt8(value))
+      }
+    } catch {
+      Logger().error("Failed to set energy preference: \(error)")
+    }
+  }
+
+  private func setBatteryUsage(to value: BatteryUsageSetting) async {
+    guard let energyPreferenceTrait else {
+      Logger().error("Energy preference trait not available")
+      return
+    }
+
+    do {
+      _ = try await energyPreferenceTrait.update {
+        $0.setCurrentEnergyBalance(value.idx)
+      }
+    } catch {
+      Logger().error("Failed to set battery usage: \(error)")
+    }
+  }
+
+  private func setAnalyticsEnabled(to value: Bool) async {
+    guard let extendedGeneralDiagnosticsTrait else {
+      Logger().error("Extended general diagnostics trait not available")
+      return
+    }
+    do {
+      _ = try await extendedGeneralDiagnosticsTrait.update {
+        $0.setAnalyticsEnabled(value)
+      }
+    } catch {
+      Logger().error("Failed to set analytics enabled: \(error)")
+    }
+  }
+
+  private func setLogUploadEnabled(to value: Bool) async {
+    guard let extendedGeneralDiagnosticsTrait else {
+      Logger().error("Extended general diagnostics trait not available")
+      return
+    }
+
+    do {
+      _ = try await extendedGeneralDiagnosticsTrait.update {
+        $0.setLogUploadEnabled(value)
+      }
+    } catch {
+      Logger().error("Failed to set log upload enabled: \(error)")
+    }
+  }
+
   private func getRecordingConnection() async throws
     -> Google.PushAvStreamTransportTrait.TransportConfigurationStruct?
   {
@@ -624,4 +867,5 @@ struct SettingsDisplayed: OptionSet {
   public static let doorbell = SettingsDisplayed(rawValue: 1 << 2)
   public static let battery = SettingsDisplayed(rawValue: 1 << 3)
   public static let information = SettingsDisplayed(rawValue: 1 << 4)
+  public static let diagnostics = SettingsDisplayed(rawValue: 1 << 5)
 }

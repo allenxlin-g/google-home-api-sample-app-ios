@@ -35,6 +35,7 @@ struct StructureView: View {
   @State private var selectedTab: Tab = .devices
   @State private var oobeDevice: HomeDevice?
   @State private var isShowingCodeScanner: Bool = false
+  @State private var automationList: AutomationList? = nil
 
   var structureID: String { self.viewModel.structureID }
 
@@ -47,6 +48,22 @@ struct StructureView: View {
       structureID: self.structureID
     ) {
       actualStructureView(structure: structure)
+        .onChange(of: selectedTab) { _, selectedTab in
+          guard selectedTab == .automations else { return }
+
+          // Initialize the automation list if it hasn't been already.
+          if self.automationList == nil || self.automationList?.structure.id != structure.id {
+            self.automationList = AutomationList(structure: structure)
+          } else {
+            Task {
+              do {
+                try await self.automationList?.refresh()
+              } catch {
+                Logger().error("Failed to refresh automations: \(error)")
+              }
+            }
+          }
+        }
         .sheet(item: $oobeDevice) { device in
           if device.types.contains(GoogleCameraDeviceType.self) {
             NavigationStack {
@@ -79,10 +96,7 @@ struct StructureView: View {
               .font(.title)
           }
           .tag(Tab.devices)
-        AutomationsView()
-          .environmentObject(mainViewModel)
-          .environmentObject(AutomationList(structure: structure))
-          .padding()
+        automationsTabContent(structure: structure)
           .tabItem {
             Label("Automations", image: "astrophotography_mode_symbol")
           }
@@ -147,11 +161,23 @@ struct StructureView: View {
         self.addRoom(name: roomName, structure: structure)
       }
     }
-    .alert(
-      "No hub found.",
-      isPresented: self.$viewModel.showNoHubFoundDialog,
-    ) {
-      Button("Close", role: .cancel) {}
+    .errorAlert(isPresented: self.$viewModel.showNoHubFoundDialog, error: .noHubFound)
+  }
+
+  @ViewBuilder
+  private func automationsTabContent(structure: Structure) -> some View {
+    if let automationList = self.automationList {
+      AutomationsView()
+        .environmentObject(mainViewModel)
+        .environmentObject(automationList)
+        .padding()
+    } else {
+      // Shown initially until the automations tab is selected for the first time
+      // and the viewModel.automationList is created.
+      VStack {
+        Text("Loading Automations...")
+        ProgressView()
+      }
     }
   }
 
@@ -172,6 +198,7 @@ struct StructureView: View {
                   .padding(.vertical)
               } else {
                 ForEach(entry.deviceControls, id: \.id) { deviceControl in
+                  let uniqueID = "\(deviceControl.id)-\(String(describing: type(of: deviceControl)))"
                   NavigationLink(destination: {
                     if let home = self.mainViewModel.home {
                       switch deviceControl {
@@ -199,6 +226,7 @@ struct StructureView: View {
                       deviceControl: deviceControl
                     )
                   }
+                  .id(uniqueID)
                 }
               }
             } header: {

@@ -303,6 +303,7 @@ public class HistoryViewModel {
       timestampString: timestampString,
       thumbnailURL: "",
       previewClipURL: nil,
+      historicalPlaybackURL: nil,
       timestamp: historyItem.timestamp,
     )
   }
@@ -319,11 +320,14 @@ public class HistoryViewModel {
 
     let eventTypeFilters = self.appliedEventTypeFilters ?? self.eventTypeFilters
 
+    // Extracts all matching event titles from the payload
     let eventTypes = Set(cameraEvent.payload.eventTracks?.compactMap { $0.eventTypes.first } ?? [])
-    let eventTitle =
-      eventTypeFilters
-      .first { eventTypes.contains($0.cameraEventTypeEnum) }?
-      .eventTypeName ?? "Unknown camera event"
+    let matchedTitles = eventTypeFilters
+      .filter { eventTypes.contains($0.cameraEventTypeEnum) }
+      .map { $0.eventTypeName }
+    let eventTitle = matchedTitles.isEmpty
+      ? "Unknown camera event"
+      : matchedTitles.joined(separator: " / ")
 
     let thumbnailURL = cameraEvent.payload.mediaUrl?.thumbnail_url ?? ""
 
@@ -338,6 +342,11 @@ public class HistoryViewModel {
       previewClipURL = components.url
     }
 
+    var historicalPlaybackURL: URL? = nil
+    if let historyPlaybackURLString = cameraEvent.payload.mediaUrl?.hls_master_playlist_url {
+      historicalPlaybackURL = URL(string: historyPlaybackURLString)
+    }
+
     return HistoryItemViewModel(
       id: historyItem.id,
       eventTitle: eventTitle,
@@ -345,6 +354,7 @@ public class HistoryViewModel {
       timestampString: timestamp,
       thumbnailURL: thumbnailURL,
       previewClipURL: previewClipURL,
+      historicalPlaybackURL: historicalPlaybackURL,
       timestamp: historyItem.timestamp
     )
   }
@@ -447,6 +457,7 @@ public struct HistoryItemViewModel: Sendable, Identifiable {
   public let timestampString: String
   public let thumbnailURL: String
   public let previewClipURL: URL?
+  public let historicalPlaybackURL: URL?
   public let timestamp: Date
 }
 

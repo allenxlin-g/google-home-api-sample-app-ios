@@ -70,7 +70,7 @@ class AccountViewModel: ObservableObject {
 
   private func updatePermissions() {
     Task {
-      self.home?.presentPermissionsUpdate()
+      await self.home?.permissions.presentPermissionsUpdate()
     }
   }
 }
